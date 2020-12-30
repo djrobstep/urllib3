@@ -1,9 +1,15 @@
 # -*- coding: utf-8 -*-
 
 import contextlib
+<<<<<<< HEAD
+=======
+import http.client
+import os
+>>>>>>> 703a86f0... yield streamed bytes as soon as they arrive
 import re
 import socket
 import ssl
+import tempfile
 import zlib
 from base64 import b64decode
 from io import BufferedReader, BytesIO, TextIOWrapper
@@ -450,6 +456,31 @@ class TestResponse(object):
 
         assert next(stream) == b"fo"
         assert next(stream) == b"o"
+        with pytest.raises(StopIteration):
+            next(stream)
+
+    def test_streaming_on_arrival(self):
+        socket_r, socket_w = socket.socketpair()
+
+        raw = http.client.HTTPResponse(socket_r)
+        raw.chunked = False
+        raw.length = 3
+
+        resp = HTTPResponse(raw, preload_content=False)
+        stream = resp.stream(amt=-1, decode_content=False)
+
+        w = socket_w.makefile("wb")
+
+        w.write(b"fo")
+        w.flush()
+        assert next(stream) == b"fo"
+
+        w.write(b"o")
+        w.flush()
+        assert next(stream) == b"o"
+
+        w.close()
+
         with pytest.raises(StopIteration):
             next(stream)
 
